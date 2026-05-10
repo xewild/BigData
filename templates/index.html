@@ -1,0 +1,1010 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Détection TSA</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Inter:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0d0f14;
+        --surface: #161920;
+        --surface2: #1e2230;
+        --border: rgba(255, 255, 255, 0.07);
+        --border2: rgba(255, 255, 255, 0.12);
+        --text: #f0f2f8;
+        --muted: #7a8099;
+        --accent: #4f8ef7;
+        --accent2: #7c3aed;
+        --green: #10b981;
+        --orange: #f59e0b;
+        --red: #ef4444;
+        --green-bg: rgba(16, 185, 129, 0.1);
+        --orange-bg: rgba(245, 158, 11, 0.1);
+        --red-bg: rgba(239, 68, 68, 0.1);
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 40px 20px 80px;
+      }
+
+      /* HEADER */
+      .header {
+        text-align: center;
+        margin-bottom: 48px;
+      }
+      .header-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(79, 142, 247, 0.12);
+        border: 1px solid rgba(79, 142, 247, 0.25);
+        border-radius: 100px;
+        padding: 5px 14px;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--accent);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+      }
+      .header h1 {
+        font-family: "Syne", sans-serif;
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        font-weight: 700;
+        letter-spacing: -1px;
+        line-height: 1.1;
+        margin-bottom: 14px;
+        background: linear-gradient(135deg, #f0f2f8 0%, #7a8099 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .header p {
+        color: var(--muted);
+        font-size: 0.95rem;
+        font-weight: 300;
+        max-width: 480px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
+
+      /* WRAPPER */
+      .wrapper {
+        max-width: 780px;
+        margin: 0 auto;
+      }
+
+      /* SECTION CARD */
+      .section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 28px 32px;
+        margin-bottom: 16px;
+      }
+
+      .section-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Syne", sans-serif;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 24px;
+      }
+      .section-label::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      /* QUESTIONS */
+      .question {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 13px 0;
+        border-bottom: 1px solid var(--border);
+        gap: 16px;
+      }
+      .question:last-child {
+        border-bottom: none;
+      }
+      .question-num {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--accent);
+        min-width: 22px;
+        font-family: "Syne", sans-serif;
+      }
+      .question-text {
+        font-size: 0.88rem;
+        color: var(--text);
+        flex: 1;
+        line-height: 1.5;
+        font-weight: 300;
+      }
+      .radio-group {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .radio-btn input {
+        display: none;
+      }
+      .radio-btn label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 32px;
+        border: 1px solid var(--border2);
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        color: var(--muted);
+        background: var(--surface2);
+      }
+      .radio-btn input:checked + label {
+        border-color: var(--accent);
+        background: rgba(79, 142, 247, 0.15);
+        color: var(--accent);
+      }
+      .radio-btn label:hover {
+        border-color: var(--border2);
+        color: var(--text);
+      }
+
+      /* GRID INFO */
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .field label {
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .field input,
+      .field select {
+        font-family: "Inter", sans-serif;
+        font-size: 0.88rem;
+        padding: 10px 14px;
+        border: 1px solid var(--border2);
+        border-radius: 10px;
+        background: var(--surface2);
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.15s;
+        -webkit-appearance: none;
+      }
+      .field input:focus,
+      .field select:focus {
+        border-color: var(--accent);
+      }
+      .field select option {
+        background: var(--surface2);
+      }
+
+      /* SCORES CLINIQUES */
+      .score-field {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .score-field label {
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .score-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .score-row input[type="range"] {
+        flex: 1;
+        height: 4px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+      .score-val {
+        font-family: "Syne", sans-serif;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--accent);
+        min-width: 28px;
+        text-align: right;
+      }
+
+      /* TOGGLE YES/NO */
+      .toggle-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .toggle-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+      }
+      .toggle-label {
+        font-size: 0.82rem;
+        color: var(--text);
+        font-weight: 300;
+      }
+      .toggle-switch {
+        display: flex;
+        gap: 4px;
+      }
+      .toggle-switch input {
+        display: none;
+      }
+      .toggle-switch label {
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        font-weight: 500;
+        cursor: pointer;
+        color: var(--muted);
+        transition: all 0.15s;
+      }
+      .toggle-switch input:checked + label {
+        background: rgba(79, 142, 247, 0.2);
+        color: var(--accent);
+      }
+
+      /* BTN */
+      .btn-send {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(
+          135deg,
+          var(--accent) 0%,
+          var(--accent2) 100%
+        );
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-family: "Syne", sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+        transition: all 0.2s ease;
+        margin-top: 8px;
+      }
+      .btn-send:hover {
+        opacity: 0.88;
+        transform: translateY(-1px);
+      }
+      .btn-send:active {
+        transform: translateY(0);
+      }
+      .btn-send:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* LOADING */
+      #loading {
+        display: none;
+        text-align: center;
+        padding: 36px;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 2px solid var(--border2);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        margin: 0 auto 16px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      #loading p {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      /* RESULT */
+      #result {
+        display: none;
+      }
+
+      .result-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        gap: 16px;
+      }
+      .result-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+      .result-title {
+        font-family: "Syne", sans-serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      .result-sub {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .risk-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 14px;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        flex-shrink: 0;
+      }
+      .risk-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+
+      /* prob bars */
+      .prob-section {
+        margin: 20px 0;
+      }
+      .prob-row {
+        margin-bottom: 14px;
+      }
+      .prob-top {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 7px;
+        font-size: 0.82rem;
+      }
+      .prob-top span:first-child {
+        color: var(--muted);
+      }
+      .prob-top span:last-child {
+        font-weight: 600;
+        font-family: "Syne", sans-serif;
+      }
+      .prob-bar {
+        height: 6px;
+        background: var(--surface2);
+        border-radius: 100px;
+        overflow: hidden;
+      }
+      .prob-fill {
+        height: 100%;
+        border-radius: 100px;
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 0%;
+      }
+
+      .recommendation {
+        padding: 14px 18px;
+        border-radius: 10px;
+        margin-top: 20px;
+        font-size: 0.85rem;
+        line-height: 1.7;
+        border-left: 2px solid;
+      }
+      .recommendation strong {
+        display: block;
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+        font-weight: 600;
+      }
+
+      .timestamp {
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-align: right;
+        margin-top: 16px;
+      }
+
+      .disclaimer {
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-top: 20px;
+        line-height: 1.7;
+        padding: 12px 16px;
+        border-top: 1px solid var(--border);
+      }
+
+      /* themes */
+      .theme-green .result-icon {
+        background: var(--green-bg);
+      }
+      .theme-green .result-title {
+        color: var(--green);
+      }
+      .theme-green .risk-badge {
+        background: var(--green-bg);
+        color: var(--green);
+      }
+      .theme-green .risk-dot {
+        background: var(--green);
+      }
+      .theme-green .prob-fill.main {
+        background: var(--green);
+      }
+      .theme-green .prob-fill.sec {
+        background: rgba(16, 185, 129, 0.3);
+      }
+      .theme-green .recommendation {
+        background: var(--green-bg);
+        border-color: var(--green);
+        color: var(--green);
+      }
+
+      .theme-orange .result-icon {
+        background: var(--orange-bg);
+      }
+      .theme-orange .result-title {
+        color: var(--orange);
+      }
+      .theme-orange .risk-badge {
+        background: var(--orange-bg);
+        color: var(--orange);
+      }
+      .theme-orange .risk-dot {
+        background: var(--orange);
+      }
+      .theme-orange .prob-fill.main {
+        background: var(--orange);
+      }
+      .theme-orange .prob-fill.sec {
+        background: rgba(245, 158, 11, 0.3);
+      }
+      .theme-orange .recommendation {
+        background: var(--orange-bg);
+        border-color: var(--orange);
+        color: var(--orange);
+      }
+
+      .theme-red .result-icon {
+        background: var(--red-bg);
+      }
+      .theme-red .result-title {
+        color: var(--red);
+      }
+      .theme-red .risk-badge {
+        background: var(--red-bg);
+        color: var(--red);
+      }
+      .theme-red .risk-dot {
+        background: var(--red);
+      }
+      .theme-red .prob-fill.main {
+        background: var(--red);
+      }
+      .theme-red .prob-fill.sec {
+        background: rgba(239, 68, 68, 0.3);
+      }
+      .theme-red .recommendation {
+        background: var(--red-bg);
+        border-color: var(--red);
+        color: var(--red);
+      }
+
+      @media (max-width: 560px) {
+        .info-grid,
+        .toggle-grid {
+          grid-template-columns: 1fr;
+        }
+        .section {
+          padding: 20px;
+        }
+        .question {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <!-- HEADER -->
+      <div class="header">
+        <div class="header-badge">Outil d'aide au dépistage</div>
+        <h1>Détection TSA</h1>
+        <p>
+          Trouble du Spectre de l'Autisme — Analyse basée sur le Machine
+          Learning et le Big Data
+        </p>
+      </div>
+
+      <!-- SECTION 1 : QUESTIONNAIRE AQ-10 -->
+      <div class="section">
+        <div class="section-label">Questionnaire AQ-10 — 10 questions</div>
+        <div id="form-questions"></div>
+      </div>
+
+      <!-- SECTION 2 : TROUBLES ASSOCIÉS -->
+      <div class="section">
+        <div class="section-label">Troubles et conditions associés</div>
+        <div class="toggle-grid">
+          <div class="toggle-item">
+            <span class="toggle-label">Retard de langage</span>
+            <div class="toggle-switch">
+              <input type="radio" name="speech" id="speech_no" value="No" />
+              <label for="speech_no">Non</label>
+              <input type="radio" name="speech" id="speech_yes" value="Yes" />
+              <label for="speech_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="toggle-item">
+            <span class="toggle-label">Trouble d'apprentissage</span>
+            <div class="toggle-switch">
+              <input type="radio" name="learning" id="learning_no" value="No" />
+              <label for="learning_no">Non</label>
+              <input
+                type="radio"
+                name="learning"
+                id="learning_yes"
+                value="Yes"
+              />
+              <label for="learning_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="toggle-item">
+            <span class="toggle-label">Troubles génétiques</span>
+            <div class="toggle-switch">
+              <input type="radio" name="genetic" id="genetic_no" value="No" />
+              <label for="genetic_no">Non</label>
+              <input type="radio" name="genetic" id="genetic_yes" value="Yes" />
+              <label for="genetic_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="toggle-item">
+            <span class="toggle-label">Dépression</span>
+            <div class="toggle-switch">
+              <input
+                type="radio"
+                name="depression"
+                id="depression_no"
+                value="No"
+              />
+              <label for="depression_no">Non</label>
+              <input
+                type="radio"
+                name="depression"
+                id="depression_yes"
+                value="Yes"
+              />
+              <label for="depression_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="toggle-item">
+            <span class="toggle-label">Retard développemental global</span>
+            <div class="toggle-switch">
+              <input type="radio" name="global_delay" id="gd_no" value="No" />
+              <label for="gd_no">Non</label>
+              <input type="radio" name="global_delay" id="gd_yes" value="Yes" />
+              <label for="gd_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="toggle-item">
+            <span class="toggle-label">Problèmes comportementaux</span>
+            <div class="toggle-switch">
+              <input type="radio" name="social_issues" id="si_no" value="No" />
+              <label for="si_no">Non</label>
+              <input
+                type="radio"
+                name="social_issues"
+                id="si_yes"
+                value="Yes"
+              />
+              <label for="si_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="toggle-item">
+            <span class="toggle-label">Trouble anxieux</span>
+            <div class="toggle-switch">
+              <input type="radio" name="anxiety" id="anxiety_no" value="No" />
+              <label for="anxiety_no">Non</label>
+              <input type="radio" name="anxiety" id="anxiety_yes" value="Yes" />
+              <label for="anxiety_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="toggle-item">
+            <span class="toggle-label">Ictère néonatal</span>
+            <div class="toggle-switch">
+              <input type="radio" name="jaundice" id="jaundice_no" value="No" />
+              <label for="jaundice_no">Non</label>
+              <input
+                type="radio"
+                name="jaundice"
+                id="jaundice_yes"
+                value="Yes"
+              />
+              <label for="jaundice_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="toggle-item">
+            <span class="toggle-label">Antécédent familial TSA</span>
+            <div class="toggle-switch">
+              <input type="radio" name="family_asd" id="fam_no" value="No" />
+              <label for="fam_no">Non</label>
+              <input type="radio" name="family_asd" id="fam_yes" value="Yes" />
+              <label for="fam_yes">Oui</label>
+            </div>
+          </div>
+
+          <div class="score-field">
+            <label>Social Responsiveness Scale (SRS)</label>
+            <div class="score-row">
+              <input
+                type="range"
+                id="srs"
+                min="0"
+                max="10"
+                value="0"
+                oninput="
+                  document.getElementById('srs-val').textContent = this.value
+                "
+              />
+              <span class="score-val" id="srs-val">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3 : INFORMATIONS PERSONNELLES -->
+      <div class="section">
+        <div class="section-label">Informations personnelles</div>
+        <div class="info-grid">
+          <div class="field">
+            <label>Genre</label>
+            <select id="sex">
+              <option value="M">Masculin</option>
+              <option value="F">Féminin</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Ethnicité</label>
+            <select id="ethnicity">
+              <option value="White European">White European</option>
+              <option value="Middle Eastern">Middle Eastern</option>
+              <option value="Asian">Asian</option>
+              <option value="South Asian">South Asian</option>
+              <option value="Black">Black</option>
+              <option value="Hispanic">Hispanic</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Qui remplit le test</label>
+            <select id="who">
+              <option value="Self">Soi-même</option>
+              <option value="Family Member">Membre de la famille</option>
+              <option value="Health Care Professional">
+                Professionnel de santé
+              </option>
+              <option value="Others">Autre</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Âge (années)</label>
+            <input type="number" id="age" value="10" min="1" max="100" />
+          </div>
+        </div>
+      </div>
+
+      <!-- BOUTON -->
+      <button class="btn-send" id="btn" onclick="sendData()">
+        Lancer l'analyse
+      </button>
+
+      <!-- LOADING -->
+      <div class="section" id="loading" style="margin-top: 16px">
+        <div class="spinner"></div>
+        <p>Analyse en cours via Kafka &amp; Spark ML...</p>
+      </div>
+
+      <!-- RESULT -->
+      <div class="section" id="result" style="margin-top: 16px">
+        <div id="result-inner"></div>
+        <div class="disclaimer">
+          ⚠️ Cet outil est une aide à la décision uniquement.<br />
+          Il ne remplace pas un diagnostic médical établi par un professionnel
+          de santé qualifié.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // WEBSOCKET
+      const socket = io();
+      socket.on("connect", () => console.log("WebSocket connecté"));
+      socket.on("result", (data) => {
+        if (wsTimeout) clearTimeout(wsTimeout);
+        showResult(data);
+      });
+
+      let wsTimeout = null;
+      const WS_TIMEOUT_MS = 30000;
+
+      // QUESTIONS AQ-10
+      const questions = [
+            "Je remarque souvent des bruits discrets que les autres ne remarquent pas.",
+	    "Je me concentre habituellement plus sur l'ensemble d'une image que sur les petits détails de celle-ci.",
+	    "Je trouve qu'il est facile de faire plus d'une chose à la fois.",
+	    "Si je suis interrompu(e), je peux facilement revenir à ce que j'étais en train de faire.",
+	    "Je trouve qu'il est facile de « lire entre les lignes » lorsque quelqu'un me parle.",
+	    "Je sais m'en rendre compte quand mon interlocuteur s'ennuie.",
+	    "Quand je lis une histoire, je trouve qu'il est difficile de me représenter les intentions des personnages.",
+	    "J'aime collectionner des informations sur des catégories de choses (types de voitures, d'oiseaux, de trains, de plantes...).",
+	    "Je trouve qu'il est facile de décoder ce que les autres pensent ou ressentent juste en regardant leur visage.",
+	    "Je trouve qu'il est difficile de décoder les intentions des autres.",
+      ];
+
+      const form = document.getElementById("form-questions");
+      questions.forEach((q, i) => {
+        form.innerHTML += `
+    <div class="question">
+        <span class="question-num">${String(i + 1).padStart(2, '0')}</span>
+        <span class="question-text">${q}</span>
+        <div class="radio-group">
+            <div class="radio-btn">
+                <input type="radio" name="A${i + 1}" id="A${i + 1}_yes" value="1">
+                <label for="A${i + 1}_yes">Oui</label>
+            </div>
+            <div class="radio-btn">
+                <input type="radio" name="A${i + 1}" id="A${i + 1}_no" value="0">
+                <label for="A${i + 1}_no">Non</label>
+            </div>
+        </div>
+    </div>`;
+      });
+
+      // SEND DATA
+      function sendData() {
+        // Validation questions
+        for (let i = 1; i <= 10; i++) {
+          if (!document.querySelector(`input[name="A${i}"]:checked`)) {
+            alert(`Veuillez répondre à la question ${i}.`);
+            return;
+          }
+        }
+
+        // Collecte scores AQ
+        let data = {};
+        for (let i = 1; i <= 9; i++) {
+          data[`A${i}`] = parseInt(
+            document.querySelector(`input[name="A${i}"]:checked`).value,
+          );
+        }
+        data["A10_Autism_Spectrum_Quotient"] = parseInt(
+          document.querySelector(`input[name="A10"]:checked`).value,
+        );
+
+        // Troubles associés
+        data["Speech_Delay"] = document.querySelector(
+          'input[name="speech"]:checked',
+        ).value;
+        data["Learning_disorder"] = document.querySelector(
+          'input[name="learning"]:checked',
+        ).value;
+        data["Genetic_Disorders"] = document.querySelector(
+          'input[name="genetic"]:checked',
+        ).value;
+        data["Depression"] = document.querySelector(
+          'input[name="depression"]:checked',
+        ).value;
+        data["Global_delay"] = document.querySelector(
+          'input[name="global_delay"]:checked',
+        ).value;
+        data["Social_Issues"] = document.querySelector(
+          'input[name="social_issues"]:checked',
+        ).value;
+        data["Anxiety_disorder"] = document.querySelector(
+          'input[name="anxiety"]:checked',
+        ).value;
+        data["Jaundice"] = document.querySelector(
+          'input[name="jaundice"]:checked',
+        ).value;
+        data["Family_mem_with_ASD"] = document.querySelector(
+          'input[name="family_asd"]:checked',
+        ).value;
+        data["Social_Responsiveness_Scale"] = parseInt(
+          document.getElementById("srs").value,
+        );
+
+        // Infos démographiques
+        data["Sex"] = document.getElementById("sex").value;
+        data["Ethnicity"] = document.getElementById("ethnicity").value;
+        data["Who_completed_the_test"] = document.getElementById("who").value;
+        data["Age_Years"] = parseInt(document.getElementById("age").value);
+
+        // UI état loading
+        document.getElementById("result").style.display = "none";
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("btn").disabled = true;
+        document.getElementById("btn").textContent = "Analyse en cours...";
+
+        // Timeout 30s si le WebSocket ne répond pas
+        wsTimeout = setTimeout(() => {
+          resetBtn();
+          alert("Délai d'attente dépassé (30s). Vérifiez que Kafka et le consumer sont bien démarrés.");
+        }, WS_TIMEOUT_MS);
+
+        fetch("/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+          .then((res) => res.json())
+          .then((res) => {
+            if (res.error) {
+              resetBtn();
+              alert("Erreur : " + res.error);
+            }
+          })
+          .catch(() => {
+            resetBtn();
+            alert("Erreur de connexion serveur.");
+          });
+      }
+
+      function resetBtn() {
+        if (wsTimeout) { clearTimeout(wsTimeout); wsTimeout = null; }
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("btn").disabled = false;
+        document.getElementById("btn").textContent = "Lancer l'analyse";
+      }
+
+      // SHOW RESULT
+      function showResult(data) {
+        resetBtn();
+
+        const risk = data.risk_level;
+        const probTSA = data.probability_tsa;
+        const probNo = data.probability_no_tsa;
+        const ts = data.timestamp;
+
+        let theme, icon, title, subtitle, recommendation;
+
+        if (risk === "HIGH") {
+          theme = "theme-red";
+          icon = "🔴";
+          title = "TSA probable détecté";
+          subtitle = "Niveau de risque élevé — intervention recommandée";
+          recommendation =
+            "Une consultation urgente auprès d'un spécialiste (psychiatre ou neuropédiatre) est fortement recommandée. Ce résultat doit impérativement être confirmé par un professionnel de santé.";
+        } else if (risk === "MEDIUM") {
+          theme = "theme-orange";
+          icon = "🟡";
+          title = "Indicateurs modérés";
+          subtitle = "Niveau de risque modéré — suivi conseillé";
+          recommendation =
+            "Certains indicateurs sont présents. Un suivi médical auprès d'un spécialiste est conseillé pour une évaluation approfondie.";
+        } else {
+          theme = "theme-green";
+          icon = "🟢";
+          title = "Risque faible";
+          subtitle = "Peu d'indicateurs détectés";
+          recommendation =
+            "Les indicateurs détectés sont faibles. Aucune action urgente n'est nécessaire, mais restez attentif à l'évolution des comportements.";
+        }
+
+        document.getElementById("result-inner").innerHTML = `
+        <div class="${theme}">
+            <div class="result-header">
+                <div style="display:flex;align-items:center;gap:14px">
+                    <div class="result-icon">${icon}</div>
+                    <div>
+                        <div class="result-title">${title}</div>
+                        <div class="result-sub">${subtitle}</div>
+                    </div>
+                </div>
+                <span class="risk-badge">
+                    <span class="risk-dot"></span>${risk}
+                </span>
+            </div>
+
+            <div class="prob-section">
+                <div class="prob-row">
+                    <div class="prob-top">
+                        <span>Probabilité de TSA</span>
+                        <span>${probTSA}%</span>
+                    </div>
+                    <div class="prob-bar"><div class="prob-fill main" id="bar-tsa"></div></div>
+                </div>
+                <div class="prob-row">
+                    <div class="prob-top">
+                        <span>Probabilité sans TSA</span>
+                        <span>${probNo}%</span>
+                    </div>
+                    <div class="prob-bar"><div class="prob-fill sec" id="bar-no"></div></div>
+                </div>
+            </div>
+
+            <div class="recommendation">
+                <strong>Recommandation</strong>
+                ${recommendation}
+            </div>
+
+            <div class="timestamp">Analyse effectuée le ${ts}</div>
+        </div>`;
+
+        document.getElementById("result").style.display = "block";
+        document
+          .getElementById("result")
+          .scrollIntoView({ behavior: "smooth" });
+
+        setTimeout(() => {
+          document.getElementById("bar-tsa").style.width = probTSA + "%";
+          document.getElementById("bar-no").style.width = probNo + "%";
+        }, 100);
+      }
+    </script>
+  </body>
+</html>
